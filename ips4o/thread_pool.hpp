@@ -34,11 +34,7 @@
  *****************************************************************************/
 
 #pragma once
-#ifdef _OPENMP
-#include <omp.h>
-#endif  // _OPENMP
 
-#ifdef _REENTRANT
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -46,71 +42,8 @@
 #include <vector>
 
 #include "synchronization.hpp"
-#endif  // _REENTRANT
 
 namespace ips4o {
-
-#ifdef _OPENMP
-
-/**
- * A thread pool using OpenMP.
- */
-class OpenMPThreadPool {
- public:
-    class Sync {
-     public:
-        void barrier() const {
-#pragma omp barrier
-        }
-
-#ifdef __INTEL_COMPILER
-        // Workaround: icc with OpenMP fails here when using lambdas as template parameter
-        void single(std::function<void()> func) const {
-#else
-        template <class F>
-        void single(F&& func) const {
-#endif
-#pragma omp single
-            func();
-        }
-
-        template <class F>
-        void critical(F&& func) const {
-#pragma omp critical
-            func();
-        }
-    };
-
-    explicit OpenMPThreadPool(int num_threads = OpenMPThreadPool::maxNumThreads())
-            : num_threads_(num_threads) {}
-
-    /**
-    * Entry point for parallel execution.
-    */
-    template <class F>
-    void operator()(F&& func, int num_threads = std::numeric_limits<int>::max()) {
-        num_threads = std::min(num_threads, num_threads_);
-        if (num_threads > 1)
-#pragma omp parallel num_threads(num_threads)
-            func(omp_get_thread_num(), omp_get_num_threads());
-        else
-            func(0, 1);
-    }
-
-    Sync sync() const { return {}; }
-
-    int numThreads() const { return num_threads_; }
-
-    static int maxNumThreads() { return omp_get_max_threads(); }
-
- private:
-    int num_threads_;
-};
-
-#endif  // _OPENMP
-
-
-#ifdef _REENTRANT
 
 /**
  * A thread pool using std::thread.
@@ -200,12 +133,6 @@ class StdThreadPool {
     std::unique_ptr<Impl> impl_;
 };
 
-#endif  // _REENTRANT
-
-#ifdef _OPENMP
-using DefaultThreadPool = OpenMPThreadPool;
-#elif defined(_REENTRANT)
 using DefaultThreadPool = StdThreadPool;
-#endif
 
 }  // namespace ips4o
