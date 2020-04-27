@@ -34,7 +34,6 @@
  *****************************************************************************/
 
 #pragma once
-#ifdef _REENTRANT
 
 #include <condition_variable>
 #include <mutex>
@@ -137,4 +136,3 @@ void Sync::critical(F&& func) {
 
 }  // namespace detail
 }  // namespace ips4o
-#endif  // _REENTRANT
